@@ -54,7 +54,7 @@ export default function EditAccountModal({ open, onClose, account, onSave }) {
       onSave();  // Recarga lista
       onClose(); // Cierra modal
     } catch (err) {
-      alert('Error al actualizar la cuenta');
+      alert('Error hpta x2');
     }
   };
 
