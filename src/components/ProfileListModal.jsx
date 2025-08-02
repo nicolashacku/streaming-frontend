@@ -63,7 +63,7 @@ export default function ProfileListModal({ open, onClose, perfiles = [], account
       onSave();
       onClose();
     } catch (err) {
-      alert('Error al guardar perfiles');
+      alert('Error x3333');
     }
   };
 
