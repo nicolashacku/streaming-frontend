@@ -270,8 +270,8 @@ export default function AccountTable() {
             <TableRow>
               <TableCell>Servicio</TableCell>
               <TableCell>Correo</TableCell>
-              <TableCell>Asignado A</TableCell>
-              <TableCell>Dias Restantes</TableCell>
+              <TableCell>AsignadoA</TableCell>
+              <TableCell>DiasRestantes</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
