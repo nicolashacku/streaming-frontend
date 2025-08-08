@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import axios from "axios";
 import {
   Table,
@@ -17,7 +17,7 @@ import {
   MenuItem,
   FormControl,
   InputLabel,
-  Box
+  Box,
 } from "@mui/material";
 import DeleteIcon from "@mui/icons-material/Delete";
 import EditIcon from "@mui/icons-material/Edit";
@@ -34,6 +34,9 @@ export default function AccountTable() {
   const [perfilesActivos, setPerfilesActivos] = useState([]);
   const [cuentaPerfilesId, setCuentaPerfilesId] = useState(null);
   const [filtroServicio, setFiltroServicio] = useState("Todos");
+
+  // dias de alerta para considerar "proximas a vencer"
+  const DIAS_ALERTA = 5;
 
   const abrirModal = (cuenta) => {
     setCuentaEditar(cuenta);
@@ -60,7 +63,9 @@ export default function AccountTable() {
   };
 
   const eliminarCuenta = async (id) => {
-    const confirmar = window.confirm("¿Estás seguro de que quieres eliminar esta cuenta?");
+    const confirmar = window.confirm(
+      "¿Estás seguro de que quieres eliminar esta cuenta?"
+    );
     if (!confirmar) return;
 
     const token = localStorage.getItem("token");
@@ -75,12 +80,59 @@ export default function AccountTable() {
     }
   };
 
-  const serviciosUnicos = ["Todos", ...new Set(cuentas.map((c) => c.nombreServicio))];
+  const serviciosUnicos = [
+    "Todos",
+    ...new Set(cuentas.map((c) => c.nombreServicio)),
+  ];
+
+  // helper: dias restantes hasta una fecha (redondeo hacia abajo)
+  const daysUntil = (dateStr) => {
+    if (!dateStr) return Infinity;
+    const today = new Date();
+    const target = new Date(dateStr);
+    const start = new Date(
+      today.getFullYear(),
+      today.getMonth(),
+      today.getDate()
+    );
+    const end = new Date(
+      target.getFullYear(),
+      target.getMonth(),
+      target.getDate()
+    );
+    const diffMs = end - start;
+    return Math.floor(diffMs / (1000 * 60 * 60 * 24));
+  };
+
+  // helper: obtener a quien esta asignada la cuenta (intenta varias claves comunes)
+  const getAsignadoA = (cuenta) =>
+    cuenta.asignadoA ||
+    cuenta.asignado ||
+    cuenta.usuarioAsignado ||
+    cuenta.assignedTo ||
+    "-";
+
+  // memo: cuentas que vencen entre 0 y DIAS_ALERTA dias
+  const proximasAVencer = useMemo(() => {
+    return (cuentas || [])
+      .filter((c) => {
+        const d = daysUntil(c.fechaExpiracion);
+        return d >= 0 && d <= DIAS_ALERTA;
+      })
+      .sort(
+        (a, b) => daysUntil(a.fechaExpiracion) - daysUntil(b.fechaExpiracion)
+      );
+  }, [cuentas]);
 
   return (
     <>
       <TableContainer component={Paper} sx={{ mt: 4 }}>
-        <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ px: 2, pt: 2, pb: 1 }}>
+        <Stack
+          direction="row"
+          justifyContent="space-between"
+          alignItems="center"
+          sx={{ px: 2, pt: 2, pb: 1 }}
+        >
           <Typography variant="h6">Cuentas de Streaming</Typography>
           <Stack direction="row" spacing={2}>
             <FormControl sx={{ minWidth: 150 }} size="small">
@@ -97,7 +149,10 @@ export default function AccountTable() {
                 ))}
               </Select>
             </FormControl>
-            <Button variant="contained" onClick={() => setModalNuevoAbierto(true)}>
+            <Button
+              variant="contained"
+              onClick={() => setModalNuevoAbierto(true)}
+            >
               Agregar cuenta
             </Button>
           </Stack>
@@ -118,9 +173,15 @@ export default function AccountTable() {
           </TableHead>
           <TableBody>
             {cuentas
-              .filter((cuenta) => filtroServicio === "Todos" || cuenta.nombreServicio === filtroServicio)
+              .filter(
+                (cuenta) =>
+                  filtroServicio === "Todos" ||
+                  cuenta.nombreServicio === filtroServicio
+              )
               .map((cuenta) => {
-                const libres = cuenta.perfiles.filter((p) => p.estadoPerfil === "Libre").length;
+                const libres = cuenta.perfiles.filter(
+                  (p) => p.estadoPerfil === "Libre"
+                ).length;
                 const total = cuenta.perfiles.length;
                 const hayDisponibles = libres > 0;
 
@@ -128,7 +189,9 @@ export default function AccountTable() {
                   <TableRow key={cuenta._id}>
                     <TableCell>{cuenta.nombreServicio}</TableCell>
                     <TableCell>{cuenta.correoAcceso}</TableCell>
-                    <TableCell>{cuenta.perfiles.map((p) => p.nombrePerfil).join(", ")}</TableCell>
+                    <TableCell>
+                      {cuenta.perfiles.map((p) => p.nombrePerfil).join(", ")}
+                    </TableCell>
                     <TableCell>
                       <Tooltip title={`${libres} disponibles de ${total}`}>
                         <Box
@@ -163,12 +226,18 @@ export default function AccountTable() {
                     </TableCell>
                     <TableCell align="right">
                       <Tooltip title="Editar">
-                        <IconButton color="primary" onClick={() => abrirModal(cuenta)}>
+                        <IconButton
+                          color="primary"
+                          onClick={() => abrirModal(cuenta)}
+                        >
                           <EditIcon />
                         </IconButton>
                       </Tooltip>
                       <Tooltip title="Eliminar">
-                        <IconButton color="error" onClick={() => eliminarCuenta(cuenta._id)}>
+                        <IconButton
+                          color="error"
+                          onClick={() => eliminarCuenta(cuenta._id)}
+                        >
                           <DeleteIcon />
                         </IconButton>
                       </Tooltip>
@@ -180,9 +249,70 @@ export default function AccountTable() {
         </Table>
       </TableContainer>
 
-      <EditAccountModal open={modalAbierto} onClose={cerrarModal} account={cuentaEditar} onSave={obtenerCuentas} />
-      <CreateAccountModal open={modalNuevoAbierto} onClose={() => setModalNuevoAbierto(false)} onSave={obtenerCuentas} />
-      <ProfileListModal open={modalPerfilesAbierto} onClose={() => setModalPerfilesAbierto(false)} perfiles={perfilesActivos} accountId={cuentaPerfilesId} onSave={obtenerCuentas} />
+      {/* SECCION NUEVA: PROXIMAS A VENCER (<= 5 DIAS) */}
+      <TableContainer component={Paper} sx={{ mt: 3 }}>
+        <Stack
+          direction="row"
+          justifyContent="space-between"
+          alignItems="center"
+          sx={{ px: 2, pt: 2, pb: 1 }}
+        >
+          <Typography variant="h6">
+            Proximas a vencer (&lt;= {DIAS_ALERTA} dias)
+          </Typography>
+
+          <Typography variant="body2">
+            {proximasAVencer.length} cuentas
+          </Typography>
+        </Stack>
+        <Table>
+          <TableHead>
+            <TableRow>
+              <TableCell>Servicio</TableCell>
+              <TableCell>Correo</TableCell>
+              <TableCell>Asignado A</TableCell>
+              <TableCell>Dias Restantes</TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {proximasAVencer.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={4} align="center">
+                  No hay cuentas proximas a vencer.
+                </TableCell>
+              </TableRow>
+            ) : (
+              proximasAVencer.map((c) => (
+                <TableRow key={`px-${c._id}`}>
+                  <TableCell>{c.nombreServicio}</TableCell>
+                  <TableCell>{c.correoAcceso}</TableCell>
+                  <TableCell>{getAsignadoA(c)}</TableCell>
+                  <TableCell>{daysUntil(c.fechaExpiracion)}</TableCell>
+                </TableRow>
+              ))
+            )}
+          </TableBody>
+        </Table>
+      </TableContainer>
+
+      <EditAccountModal
+        open={modalAbierto}
+        onClose={cerrarModal}
+        account={cuentaEditar}
+        onSave={obtenerCuentas}
+      />
+      <CreateAccountModal
+        open={modalNuevoAbierto}
+        onClose={() => setModalNuevoAbierto(false)}
+        onSave={obtenerCuentas}
+      />
+      <ProfileListModal
+        open={modalPerfilesAbierto}
+        onClose={() => setModalPerfilesAbierto(false)}
+        perfiles={perfilesActivos}
+        accountId={cuentaPerfilesId}
+        onSave={obtenerCuentas}
+      />
     </>
   );
 }
