@@ -55,7 +55,7 @@ export default function AccountTable() {
   const obtenerCuentas = () => {
     const token = localStorage.getItem("token");
     axios
-      .get("https://streaming-backend-gl1f.onrender.com/api/accounts", {
+      .get("http://localhost:5000/api/accounts", {
         headers: { Authorization: `Bearer ${token}` },
       })
       .then((res) => setCuentas(res.data))

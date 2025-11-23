@@ -34,7 +34,7 @@ export default function CreateAccountModal({ open, onClose, onSave }) {
   const handleSubmit = async () => {
     const token = localStorage.getItem('token');
     try {
-      await axios.post('https://streaming-backend-gl1f.onrender.com/api/accounts', formData, {
+      await axios.post('http://localhost:5000/api/accounts', formData, {
         headers: { Authorization: `Bearer ${token}` }
       });
       onSave();   // Recargar lista

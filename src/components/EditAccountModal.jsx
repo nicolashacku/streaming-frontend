@@ -48,7 +48,7 @@ export default function EditAccountModal({ open, onClose, account, onSave }) {
   const handleSubmit = async () => {
     const token = localStorage.getItem('token');
     try {
-      await axios.put(`https://streaming-backend-gl1f.onrender.com/api/accounts/${account._id}`, formData, {
+      await axios.put(`http://localhost:5000/api/accounts/${account._id}`, formData, {
         headers: { Authorization: `Bearer ${token}` }
       });
       onSave();  // Recarga lista
